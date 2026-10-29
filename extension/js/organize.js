@@ -77,6 +77,8 @@ export async function applyPlan(plan, type) {
 
 async function runApplyPlan(plan, type) {
   if (!TYPES.includes(type)) throw new Error(`정리 종류는 "first" 또는 "new"여야 해요 (지금: ${type})`);
+  // P1에서는 첫 정리만 받는다. 새 북마크 정리는 P2에서 연다
+  if (type === "new") throw new Error(F10_ERROR);
   const groups = readPlan(plan);
 
   // ① 원래 폴더와 원래 순서를 첫 북마크를 옮기기 전에 한꺼번에 읽는다

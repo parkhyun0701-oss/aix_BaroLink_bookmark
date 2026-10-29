@@ -340,13 +340,16 @@ test("applyPlan: 계획이 잘못되면 아무것도 바꾸기 전에 오류", {
   assert.deepEqual(childIds("1"), ["10", "11", "12", "13", "14", "15", "16", "17"]);
 });
 
-test("applyPlan: keep(비어 있지 않음)·folderId는 F10이라 아무것도 바꾸기 전에 오류", { skip: SKIP }, async () => {
-  await assert.rejects(o.applyPlan({ ...plan(["쇼핑", ["11"]]), keep: ["12"] }, "new"), /F10/);
-  await assert.rejects(o.applyPlan({ type: "folders", folders: [{ folderId: "16", items: ["11"] }] }, "new"), /F10/);
+test("applyPlan: type \"new\"·keep(비어 있지 않음)·folderId는 F10이라 아무것도 바꾸기 전에 오류", { skip: SKIP }, async () => {
+  await assert.rejects(o.applyPlan({ ...plan(["쇼핑", ["11"]]), keep: ["12"] }, "first"), /F10/);
+  await assert.rejects(o.applyPlan({ type: "folders", folders: [{ folderId: "16", items: ["11"] }] }, "first"), /F10/);
+  // P1에서는 빈 keep이어도 type "new"를 받지 않는다
+  await assert.rejects(o.applyPlan({ ...plan(["쇼핑", ["11"]]), keep: [] }, "new"), /F10/);
+  await assert.rejects(o.applyPlan(plan(["쇼핑", ["11"]]), "new"), /F10/);
   assert.deepEqual(calls, []);
-  // 빈 keep과 type "new"는 받는다
-  const entry = await o.applyPlan({ ...plan(["쇼핑", ["11"]]), keep: [] }, "new");
-  assert.equal(entry.type, "new");
+  // 빈 keep과 type "first"는 받는다
+  const entry = await o.applyPlan({ ...plan(["쇼핑", ["11"]]), keep: [] }, "first");
+  assert.equal(entry.type, "first");
 });
 
 test("applyPlan: 북마크바가 없으면 아무것도 바꾸기 전에 오류", { skip: SKIP }, async () => {
