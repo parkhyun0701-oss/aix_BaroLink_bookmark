@@ -40,8 +40,9 @@ function childrenByFolder(tree) {
 }
 
 // 아무것도 바꾸기 전에 계획 전체를 검사하고, 폴더 이름별로 북마크 ID를 모은다
+// N22 입력은 { folders, keep? }라 type이 없어도 받는다. 있으면 "folders"여야 한다(N20 makePlan의 "pin" 등은 오류)
 function readPlan(plan) {
-  if (!plan || typeof plan !== "object" || plan.type !== "folders" || !Array.isArray(plan.folders)) {
+  if (!plan || typeof plan !== "object" || (plan.type !== undefined && plan.type !== "folders") || !Array.isArray(plan.folders)) {
     throw new Error("정리할 폴더 계획이 아니에요");
   }
   const keep = plan.keep;

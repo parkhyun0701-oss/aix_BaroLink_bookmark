@@ -223,6 +223,14 @@ test("applyPlan: 북마크바 맨 뒤에 폴더를 만들고 옮긴 뒤 기록�
   assert.deepEqual(data.history, [entry]);
 });
 
+test("applyPlan: 명세 N22 입력처럼 type이 없는 계획도 받는다 (F07-01)", { skip: SKIP }, async () => {
+  const entry = await o.applyPlan({ folders: [{ name: "쇼핑", items: ["11", "13"], reasons: [] }] }, "first");
+  const folder = folderNamed("쇼핑");
+  assert.deepEqual(childIds(folder), ["11", "13"]);
+  assert.deepEqual(entry.createdFolderIds, [folder]);
+  assert.deepEqual(data.history, [entry]);
+});
+
 test("applyPlan: setPending 저장이 끝난 뒤에 첫 이동을 하고, 표시는 지우지 않는다 (F07-05)", { skip: SKIP }, async () => {
   await o.applyPlan(plan(["쇼핑", ["11", "13"]]), "first");
   const firstMove = calls.indexOf("bookmarks.move");
@@ -324,6 +332,7 @@ test("applyPlan: 계획의 북마크가 모두 지워진 그룹은 폴더를 만
 test("applyPlan: 계획이 잘못되면 아무것도 바꾸기 전에 오류", { skip: SKIP }, async () => {
   const bad = [
     [{ type: "pin", reason: "" }, "first"],
+    [{ ...plan(["쇼핑", ["11"]]), type: "pin" }, "first"],
     [{ type: "folders", folders: "x" }, "first"],
     [null, "first"],
     [plan(["  ", ["11"]]), "first"],
