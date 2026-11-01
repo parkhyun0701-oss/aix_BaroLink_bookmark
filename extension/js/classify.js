@@ -58,6 +58,7 @@ export function classify(bookmark, categories) {
 
 // N18: 정답지와 비교해 적용률 · 정확도 계산
 // 입력: samples는 [{ id, title, url }], answers는 [{ id, answer }] (answer가 null이면 분류 안 됨이 정답). id로 짝짓는다
+// 정답지에 없는 샘플이 있으면 분류 안 됨과 구분할 수 없으므로 계산하지 않고 오류를 낸다
 // tests/answer-key-100.json은 두 형태를 모두 가지므로 samples와 answers에 같은 배열을 넘겨도 된다
 // 출력: { coverage, accuracy, wrong } (적용률, 정확도, 틀린 목록)
 // 적용률 = 분류된 것 / 전체, 정확도 = 정답과 같은 것 / 분류된 것 (0~1). wrong에는 분류 안 됨으로 틀린 것도 들어간다
@@ -67,8 +68,9 @@ export function measure(samples, answers, categories) {
   let correct = 0;
   const wrong = [];
   for (const sample of samples) {
+    if (!answerOf.has(sample.id)) throw new Error(`정답지에 없는 샘플: id ${sample.id}`);
     const result = classify(sample, categories);
-    const answer = answerOf.get(sample.id) ?? null;
+    const answer = answerOf.get(sample.id);
     if (result.category !== null) {
       classified += 1;
       if (result.category === answer) correct += 1;
