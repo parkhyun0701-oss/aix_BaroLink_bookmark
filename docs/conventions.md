@@ -2,7 +2,7 @@
 
 > W7 개발 준비 · GitHub 레포와 컨벤션(브랜치·커밋)
 > 근거: 서비스 계획(`service-plan.md`), 기능명세·API명세(`spec.xlsx`, v14), 파일 구조도(`file-structure.md`), 크롬 북마크 데이터 구조(`data-structure.txt`)
-> 작성일: 2026-10-06 (10월 7일 검토와 결정, 확정 시안 확인, 분류표 추가 반영) · 이 문서의 위치: `docs/conventions.md`
+> 작성일: 2026-10-06 (10월 7일 검토와 결정, 확정 시안 확인, 분류표 추가 반영 · 10월 14일 브랜치를 이슈당 하나로 변경) · 이 문서의 위치: `docs/conventions.md`
 > 저장소: `aix_BaroLink_bookmark` (공개 저장소, 10월 7일 확정) · 서비스 이름: 바로링크 (BaroLink) (10월 7일 확정)
 
 역할은 팀원 A·B·C·D로 적는다. 누가 어느 역할인지는 README의 담당 표에 **GitHub 아이디**로 적는다. 공개 저장소이므로 실제 이름은 쓰지 않는다(10월 7일 확정).
@@ -15,7 +15,7 @@
 
 1. `main`에는 직접 올리지 않는다. 내 브랜치 → 풀 리퀘스트(PR) → 한 명 승인 → 합치기.
 2. `main`은 언제 받아도 크롬에 올리면 오류 없이 열려야 한다.
-3. 브랜치 이름은 `종류/기능번호-짧은이름`, 커밋 메시지는 `종류: 한 일 (요구사항 번호)`.
+3. 브랜치는 이슈 하나에 하나다. 이름은 `종류/기능번호-짧은이름`, 커밋 메시지는 `종류: 한 일 (요구사항 번호)`.
 4. PR에는 명세의 요구사항 번호와 확인 방법을 적는다.
 5. 확인은 내 결과를 받아 쓰는 사람이 한다. 코드를 읽지 않고, 테스트용 크롬 프로필에서 명세 줄대로 눌러 본다. 코드는 CodeRabbit이 읽는다. 승인은 사람만 한다.
 6. 한 파일은 한 사람이 맡는다. 남의 파일은 담당에게 먼저 말한다.
@@ -60,13 +60,17 @@ aix_BaroLink_bookmark/
 
 ## 2. 일하는 순서
 
+① 내 이슈(예: #8 `forgotten.js`)를 열어 Assignees에 나를 넣고, 오른쪽 **Development → Create a branch**로 브랜치를 만든다. 이름은 3번 표대로, Branch source는 `main`이다. 이슈 화면에서 만들어야 브랜치가 이슈에 연결된다.
+
 ```bash
-# ① 최신 main에서 내 브랜치를 만든다
+# ① 만든 브랜치를 내 PC로 가져온다
 git switch main
 git pull
-git switch -c feat/F04-forgotten
+git fetch origin
+git switch feat/F04-forgotten
 
 # ② 작업하고 커밋한다 (git add . 대신 파일 이름을 적는다)
+#    커밋은 함수 하나를 끝낼 때마다 여러 번 해도 된다. 며칠에 한 번은 git pull origin main으로 최신 main을 받아 합친다
 git status
 git add extension/js/forgotten.js
 git commit -m "feat: 잊고 있던 북마크 후보 고르기 (F04-01~03)"
@@ -75,14 +79,14 @@ git commit -m "feat: 잊고 있던 북마크 후보 고르기 (F04-01~03)"
 #    (처음 한 번 git config --global pull.rebase false 가 필요하다. docs/setup.md 2번)
 git pull origin main
 
-# ④ 올린다
-git push -u origin feat/F04-forgotten
+# ④ 올린다 (이슈 화면에서 만든 브랜치는 이미 GitHub에 있으므로 git push만 해도 된다)
+git push
 ```
 
 ⑤ GitHub에서 PR을 만든다. 자동 검사(`check`)가 초록색인지 보고, CodeRabbit의 리뷰를 받아 댓글을 고치거나 답한다(6번).
 ⑥ 확인할 사람을 Reviewers에 넣고 팀 채팅에 알린다.
 ⑦ 승인을 받으면 **올린 사람이** 합친다(Squash and merge). 브랜치는 자동으로 지워진다.
-⑧ 다음 작업은 다시 ①부터. 합쳐진 브랜치는 다시 쓰지 않는다.
+⑧ 다음 이슈는 다시 ①부터. 합쳐진 브랜치는 다시 쓰지 않는다. 같은 이슈의 P2 함수는 새 브랜치에서 한다(3번).
 
 GitHub Desktop을 써도 순서는 같다. `git rebase`와 `git push --force`는 쓰지 않는다.
 
@@ -100,11 +104,43 @@ GitHub Desktop을 써도 순서는 같다. `git rebase`와 `git push --force`는
 | 기능번호 | 엑셀 명세의 기능 ID(F01~F17). 기능 번호가 없는 작업은 뺀다 | `F04` |
 | 짧은이름 | 영어 소문자와 하이픈, 두세 단어 | `forgotten` |
 
-예: `feat/F04-forgotten` · `feat/F07-apply-plan` · `fix/F13-undo-order` · `docs/spec-v15` · `test/sample-30` · `chore/setup`
+예: `feat/F04-forgotten` · `fix/F13-undo-order` · `docs/spec-v15` · `test/sample-30` · `chore/setup`
+
+### 브랜치는 이슈 하나에 하나 (10월 14일 변경)
+
+이슈 하나가 파일 하나이므로(4번), 브랜치도 이슈 하나에 하나를 둔다. 기능번호는 그 파일이 주로 맡는 기능 ID다. 아래 표의 이름을 그대로 쓴다.
+
+| 이슈 | 파일 (`extension/` 아래) | 담당 | 브랜치 |
+|---|---|---|---|
+| #1 | `manifest.json` | 팀원 A | `chore/manifest-desc` |
+| #2 | `js/bookmarks.js` | 팀원 A | `feat/F01-bookmarks` |
+| #3 | `js/store.js` | 팀원 A | `feat/F01-store` |
+| #4 | `js/organize.js` | 팀원 A | `feat/F07-organize` |
+| #5 | `js/view/history.js` | 팀원 A | `feat/F13-history` |
+| #6 | `background.js` | 팀원 B | `feat/F07-background` |
+| #7 | `js/classify.js` | 팀원 B | `feat/F05-classify` |
+| #8 | `js/forgotten.js` | 팀원 B | `feat/F04-forgotten` |
+| #9 | `js/view/forgottenFolder.js` | 팀원 B | `feat/F04-forgotten-folder` |
+| #10 | `data/categories.json` | 팀원 B | `feat/F05-categories` |
+| #11 | `js/plan.js` | 팀원 C | `feat/F05-plan` |
+| #12 | `js/topic.js` (P3) | 팀원 C | `feat/F16-topic` |
+| #13 | `js/view/folders.js` | 팀원 C | `feat/F03-folders` |
+| #14 | `newtab.html`, `newtab.css` | 팀원 D | `feat/F12-newtab` |
+| #15 | `js/render.js` | 팀원 D | `feat/F12-render` |
+| #16 | `js/ui.js` | 팀원 D | `feat/F02-ui` |
+| #17 | `js/view/cards.js` | 팀원 D | `feat/F06-cards` |
+| #18 | `js/search.js` | 팀원 D | `feat/F11-search` |
+| #19 | `js/dnd.js` (P3) | 팀원 D | `feat/F17-dnd` |
+| #20 | 샘플 북마크 세트 (`tests/`) | 팀원 C, 팀원 B | `test/sample-sets` |
+| #21 | 저장소 설정 마무리 | 팀원 A | `chore/repo-setup` |
+
+#22~#24는 확인 목록이라 브랜치를 만들지 않는다. 버그를 고칠 때(`fix`)와 문서·명세(`docs`)는 이 표와 별도로 그때그때 만든다.
 
 - 공용 브랜치는 `main` 하나다. `develop` 같은 브랜치는 두지 않는다.
-- 브랜치는 항상 최신 `main`에서 만든다. 다른 사람의 브랜치에서 만들지 않는다. 아직 합쳐지지 않은 남의 작업이 필요하면, 그 사람에게 된 데까지 먼저 PR로 올려 달라고 한다.
-- 브랜치 하나는 PR 하나다. 작게 만든다: 함수 몇 개 또는 요구사항 몇 줄(이슈의 체크 칸 몇 개). 일주일을 넘기지 않는다(P1이 끝나기를 기다리는 P2 브랜치는 예외, 9번).
+- 브랜치는 이슈 화면의 **Development → Create a branch**로, 항상 최신 `main`에서 만든다. 다른 사람의 브랜치에서 만들지 않는다. 아직 합쳐지지 않은 남의 작업이 필요하면, 그 사람에게 된 데까지 먼저 PR로 올려 달라고 한다(아래 "먼저 올리기").
+- 브랜치 하나는 PR 하나다. 그 이슈의 **P1 함수를 모두 끝낸 뒤** PR을 올린다. 작업 중에는 커밋을 여러 번 해도 되고, 며칠에 한 번은 `git pull origin main`으로 최신 `main`을 받아 합친다.
+- **P2·P3 함수는 P1 PR에 넣지 않는다.** P1 확인 목록(#22)이 닫힌 뒤, 같은 이슈에서 이름 끝에 `-p2`를 붙인 브랜치를 새로 만든다(예: `feat/F01-bookmarks-p2`, 9번). 이슈에 P1 함수만 있으면 브랜치는 하나로 끝난다.
+- **먼저 올리기.** 다른 사람이 기다리는 함수(예: `bookmarks.js`의 `loadTree`, `store.js`의 `load`)는 이슈 전체가 끝나기를 기다리지 않는다. 팀 채팅에 알리고, 그 함수만 담은 브랜치를 이슈 브랜치 이름 끝에 짧은 말을 붙여 따로 만들어(예: `feat/F01-bookmarks-load-tree`) 먼저 PR을 올린다. 합쳐진 뒤 이슈 브랜치에서 `git pull origin main`으로 받는다.
 
 ---
 
@@ -132,7 +168,7 @@ GitHub Desktop을 써도 순서는 같다. `git rebase`와 `git push --force`는
 - 할 일은 GitHub 이슈에 있다. **#1~#19는 파일 19개**이고(이슈 하나 = 파일 하나 = 담당 한 명), 그 파일에 만들 함수가 입력·출력·동작과 함께 체크 칸으로 들어 있다. 번호는 `spec.xlsx` '파일별 역할' 시트의 "이슈" 열에 있다. #20(샘플 세트)과 #21(저장소 설정)은 준비 작업이다.
 - 이슈는 모두 핵심 정책 → 세부 작업 → 완료 조건 → 테스트 → 참고 자료 순서로 적는다. 새 이슈를 만들 때도 이 순서를 따른다.
 - **#22~#24는 요구사항 확인 목록**이다(P1, P2, P3). 요구사항은 여러 파일이 함께 있어야 확인되므로 따로 모았다. 확인하는 사람이 눌러 보고 통과한 줄에 체크한다.
-- PR 본문에 `Refs #8`처럼 고친 파일의 이슈를 적어 연결하고, 그 파일의 마지막 함수를 끝내는 PR에만 `Closes #8`을 쓴다. 요구사항 번호(`F04-01`)에는 `#`을 붙이지 않는다.
+- 브랜치가 이슈 하나에 하나이므로(3번), PR 본문에도 그 이슈 하나를 적는다. 그 PR로 이슈의 함수가 모두 끝나면 `Closes #8`을 쓴다. P2 함수가 남아 있는 P1 PR과 "먼저 올리기" PR은 `Refs #8`을 쓰고, 마지막 PR(보통 `-p2` 브랜치)에서 `Closes #8`을 쓴다. 요구사항 번호(`F04-01`)에는 `#`을 붙이지 않는다.
 
 ---
 
@@ -338,7 +374,7 @@ AI 도구(Claude Code, Cursor, Copilot 등)가 지킬 규칙은 저장소 맨 �
 우선순위는 엑셀 명세 '기능 명세' 시트의 우선순위 열에 요구사항 줄마다 적혀 있다.
 
 - 지금은 P1 줄만 만든다(11주 중간 데모).
-- 내 P1이 먼저 끝나면 ① 나에게 온 확인 요청 ② 내 결과를 받아 쓰는 사람과 함께 연결 확인 ③ 그다음에 P2 브랜치를 만든다.
+- 내 P1이 먼저 끝나면 ① 나에게 온 확인 요청 ② 내 결과를 받아 쓰는 사람과 함께 연결 확인 ③ 그다음에 P2 브랜치(`-p2`, 3번)를 이슈 화면에서 최신 `main`으로 만든다.
 - P2 PR은 P1 요구사항이 모두 `main`에 합쳐진 뒤에 올린다(P1 확인 목록인 이슈 #22가 닫힌 뒤). P3도 P2 뒤에 같은 방식이다.
 - 데모 이틀 전부터는 `fix`만 합친다.
 - 데모 날의 `main`에 태그를 붙인다(`demo-w11`, `demo-w15`). GitHub의 Releases에서 만들면 된다. 나중에 그날의 코드를 그대로 다시 받을 수 있다.
@@ -431,6 +467,9 @@ export function pickForgotten(bookmarks, stored, now) { return []; }
 |---|---|
 | `main`에서 작업하고 커밋해 버렸다 (아직 올리기 전) | `git switch -c feat/F04-forgotten`으로 브랜치를 만들면 커밋이 따라온다. 그 뒤 `git switch main` → `git reset --hard origin/main`으로 `main`을 되돌리고, 다시 내 브랜치로 돌아온다 |
 | `main`에 올리려는데 거절된다 | 정상이다. 브랜치에서 올리고 PR을 만든다 |
+| 이슈 화면에서 만든 브랜치가 내 PC에 안 보인다 | `git fetch origin` 뒤에 `git switch 브랜치이름`. 이름은 3번 표에서 복사한다 |
+| 브랜치 이름을 잘못 지었다 (아직 커밋 전) | GitHub의 브랜치 목록에서 지우고, 이슈 화면에서 3번 표의 이름으로 다시 만든다 |
+| 이슈 브랜치가 오래돼 PR에서 충돌이 많다 | 며칠에 한 번 `git pull origin main`을 하지 않은 것이다. 지금 받아 합치고, 남의 파일 충돌은 그 담당과 같이 본다 |
 | `git pull origin main`이 "Need to specify how to reconcile divergent branches"라며 멈춘다 | `git config --global pull.rebase false`를 한 번 실행하고 다시 받는다 (`docs/setup.md` 2번) |
 | `git pull origin main`에서 충돌이 났다 | 내 파일이면 직접 고친다. 남의 파일이면 혼자 고치지 말고 그 파일의 담당과 같이 본다 |
 | 엑셀 명세에서 충돌이 났다 | 합칠 수 없다. `main`의 파일을 받고 내 변경을 다시 넣는다. 그래서 8번처럼 한 번에 한 사람만 고친다 |
