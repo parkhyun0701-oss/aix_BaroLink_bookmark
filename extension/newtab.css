@@ -57,6 +57,20 @@
   --color-dark: #0f172a;
   --color-success: #10b981;         /* emerald-500 */
   --color-shadow: rgba(15, 23, 42, 0.1);
+  --color-on-dark: #ffffff;         /* 어두운 타일 위의 글자·아이콘 */
+  --color-toast-action: #a5b4fc;    /* 토스트의 되돌리기 버튼 글자 (indigo-300) */
+
+  /* 앱 아이콘 타일 색 — ui.js의 appIcon이 제목으로 하나를 골라 쓴다 (var(--tile-N)). 타일 색 규칙은 담당(팀원 D)이 정한다 (명세 N44) */
+  --tile-1: #0f172a;
+  --tile-2: #ef4444;
+  --tile-3: #f97316;
+  --tile-4: #f59e0b;
+  --tile-5: #10b981;
+  --tile-6: #0ea5e9;
+  --tile-7: #3b82f6;
+  --tile-8: #6366f1;
+  --tile-9: #8b5cf6;
+  --tile-10: #ec4899;
 
   /* 간격 */
   --space-1: 4px;
@@ -916,7 +930,7 @@ a {
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-full);
   background: var(--color-dark);
-  color: #ffffff;
+  color: var(--color-on-dark);
   font-size: var(--font-sm);
   font-weight: var(--weight-bold);
   box-shadow: var(--shadow-lg);
@@ -924,6 +938,49 @@ a {
 
 #toast.is-visible {
   display: flex;
+}
+
+/* 토스트 안의 체크 뱃지와 되돌리기 버튼 (ui.js의 showToast가 만든다) */
+.toast__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  color: var(--color-on-dark);
+}
+
+.toast__action {
+  margin-left: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-toast-action);
+  font: inherit;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+/* =========================================================================
+   공통 모양 — 앱 아이콘 (ui.js의 appIcon)
+   색 타일 위에 파비콘 또는 제목 첫 글자. 타일 색은 appIcon이 var(--tile-N)을 인라인으로 지정한다
+   ========================================================================= */
+.app-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  color: var(--color-on-dark);
+  font-weight: var(--weight-black);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-icon__img {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
 }
 
 /* 아이콘 공통 크기 */
