@@ -1,10 +1,9 @@
 // 담당: 팀원 D · 이슈 #16 · 명세: N44, N45, N46 (F02, F04, F12)
 // 모든 화면 파일이 함께 쓰는 공통 화면 조각. 화면 파일(render.js, view/*, search.js)은 이 파일을 불러 쓸 수 있다.
-// 이 파일은 화면 파일을 부르지 않는다. 색과 크기는 newtab.css의 공통 값을 쓴다.
+// 이 파일은 화면 파일을 부르지 않는다. 색과 크기는 newtab.css의 공통 값(CSS 변수)을 쓴다.
 
-// bookmarks.js(이슈 #2)에서 파비콘 정보를 얻는다.
-// faviconUrl(url, size)는 동기로 주소 문자열을, hasFavicon(url)은 async로 "쓸 파비콘 주소 또는 null"을 돌려준다 (명세 v15).
-import { faviconUrl, hasFavicon } from "../js/bookmarks.js";
+// bookmarks.js(이슈 #2)에서 파비콘 정보를 얻는다. hasFavicon(url)은 async로 "쓸 파비콘 주소 또는 null"을 돌려준다 (명세 v15).
+import { hasFavicon } from "./bookmarks.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -35,26 +34,43 @@ const ICON_PATHS = {
   ],
 };
 
-// 타일 색 후보 — 제목으로 하나를 골라, 같은 북마크는 늘 같은 색을 쓴다
-const TILE_COLORS = [
-  "#0f172a", "#ef4444", "#f97316", "#f59e0b", "#10b981",
-  "#0ea5e9", "#3b82f6", "#6366f1", "#8b5cf6", "#ec4899",
-];
+// 타일 색은 newtab.css의 공통 값 --tile-1 ~ --tile-10을 쓴다 (색 코드를 이 파일에 직접 두지 않는다. AGENTS.md 3번)
+const TILE_COLOR_COUNT = 10;
 
-// 문자열을 받아 늘 같은 타일 색을 돌려준다
-function pickTileColor(seed) {
+// 문자열을 받아 늘 같은 타일 색 변수를 돌려준다 (같은 북마크는 늘 같은 색)
+function pickTileColorVar(seed) {
   const text = String(seed || "");
   let sum = 0;
   for (let i = 0; i < text.length; i += 1) {
-    sum = (sum + text.charCodeAt(i)) % TILE_COLORS.length;
+    sum = (sum + text.charCodeAt(i)) % TILE_COLOR_COUNT;
   }
-  return TILE_COLORS[sum];
+  return `var(--tile-${sum + 1})`;
 }
 
-// 제목의 첫 글자(공백 제외). 없으면 물음표
+// 제목의 첫 "글자"(공백 제외). 이모지도 한 글자로 센다. 없으면 물음표
+// text[0]은 이모지를 반쪽만 잘라 깨진 글자(�)가 되므로 쓰지 않는다.
 function firstLetter(title) {
   const text = String(title || "").trim();
-  return text ? text[0].toUpperCase() : "?";
+  if (!text) return "?";
+  // Intl.Segmenter가 있으면 자모·국기·가족 이모지까지 한 글자로 센다
+  if (typeof Intl !== "undefined" && typeof Intl.Segmenter === "function") {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    const first = segmenter.segment(text)[Symbol.iterator]().next().value;
+    if (first) return first.segment.toUpperCase();
+  }
+  // 폴백: 코드 포인트 단위로 쪼개면 기본 이모지는 통째로 나온다
+  return [...text][0].toUpperCase();
+}
+
+// 파비콘 확인 결과를 새 탭이 열려 있는 동안 캐시한다 (주소 → hasFavicon 결과 Promise)
+// renderAll이 아이콘을 여러 번 다시 그려도 같은 주소는 _favicon 요청을 한 번만 보낸다
+const faviconCache = new Map();
+
+function cachedHasFavicon(url) {
+  if (faviconCache.has(url)) return faviconCache.get(url);
+  const promise = Promise.resolve(hasFavicon(url)).catch(() => null);
+  faviconCache.set(url, promise);
+  return promise;
 }
 
 // N46: 선으로 그린 공통 아이콘을 만든다. 없는 이름이면 빈 <svg>
@@ -84,7 +100,7 @@ export function icon(name, size = 20) {
 
 // N44: 색 타일 위에 파비콘을 올린 앱 아이콘을 만든다. 파비콘이 없으면 제목의 첫 글자를 넣는다
 // 요소를 바로 돌려줘야 하므로(동기), 먼저 첫 글자 타일을 만들고 파비콘은 async로 확인해 있으면 교체한다.
-// hasFavicon(url)은 "쓸 파비콘 주소 또는 null"을 돌려준다 (bookmarks.js, 명세 v15).
+// 모양은 newtab.css의 .app-icon 클래스를 쓰고, 크기처럼 입력으로 바뀌는 값만 인라인으로 둔다.
 export function appIcon(bookmark = {}, size = 56) {
   const { title = "", url = "" } = bookmark;
 
@@ -92,46 +108,32 @@ export function appIcon(bookmark = {}, size = 56) {
   tile.className = "app-icon";
   tile.style.width = `${size}px`;
   tile.style.height = `${size}px`;
-  tile.style.borderRadius = "var(--radius-lg)";
-  tile.style.display = "inline-flex";
-  tile.style.alignItems = "center";
-  tile.style.justifyContent = "center";
-  tile.style.overflow = "hidden";
-  tile.style.backgroundColor = pickTileColor(title || url);
-  tile.style.color = "#ffffff";
-  tile.style.fontWeight = "var(--weight-black)";
   tile.style.fontSize = `${Math.round(size * 0.4)}px`;
-  tile.style.boxShadow = "var(--shadow-sm)";
+  tile.style.backgroundColor = pickTileColorVar(title || url);
 
   // 먼저 첫 글자로 채운다 (파비콘이 없거나 아직 확인 전인 기본 모양)
   tile.textContent = firstLetter(title);
 
   // http(s) 주소만 파비콘을 확인한다. 확인되면 첫 글자를 지우고 파비콘으로 바꾼다
   if (typeof url === "string" && /^https?:/i.test(url)) {
-    Promise.resolve(hasFavicon(url))
-      .then((iconUrl) => {
-        if (!iconUrl) return; // 파비콘이 없으면 첫 글자 그대로 둔다
-        const img = document.createElement("img");
-        img.src = iconUrl;
-        img.alt = "";
-        img.setAttribute("aria-hidden", "true");
-        const inner = Math.round(size * 0.6);
-        img.width = inner;
-        img.height = inner;
-        img.style.width = `${inner}px`;
-        img.style.height = `${inner}px`;
-        img.style.objectFit = "contain";
-        // 파비콘 로딩이 실패하면 첫 글자로 되돌린다
-        img.addEventListener("error", () => {
-          img.remove();
-          tile.textContent = firstLetter(title);
-        });
-        tile.textContent = "";
-        tile.appendChild(img);
-      })
-      .catch(() => {
-        // 파비콘 확인에 실패하면 첫 글자 그대로 둔다
+    cachedHasFavicon(url).then((iconUrl) => {
+      if (!iconUrl) return; // 파비콘이 없으면 첫 글자 그대로 둔다
+      const img = document.createElement("img");
+      img.src = iconUrl;
+      img.alt = "";
+      img.setAttribute("aria-hidden", "true");
+      img.className = "app-icon__img";
+      const inner = Math.round(size * 0.6);
+      img.width = inner;
+      img.height = inner;
+      // 파비콘 로딩이 실패하면 첫 글자로 되돌린다
+      img.addEventListener("error", () => {
+        img.remove();
+        tile.textContent = firstLetter(title);
       });
+      tile.textContent = "";
+      tile.appendChild(img);
+    });
   }
 
   return tile;
@@ -152,16 +154,9 @@ export function showToast(message, { actionLabel, onAction, duration = 2200 } = 
   }
   toast.replaceChildren();
 
-  // 체크 뱃지 + 문구
+  // 체크 뱃지 + 문구. 모양은 newtab.css의 .toast__badge를 쓴다
   const badge = document.createElement("span");
-  badge.className = "brand__logo";
-  badge.style.display = "inline-flex";
-  badge.style.alignItems = "center";
-  badge.style.justifyContent = "center";
-  badge.style.width = "20px";
-  badge.style.height = "20px";
-  badge.style.borderRadius = "var(--radius-full)";
-  badge.style.background = "var(--color-success)";
+  badge.className = "toast__badge";
   badge.appendChild(icon("check", 14));
   toast.appendChild(badge);
 
@@ -176,15 +171,13 @@ export function showToast(message, { actionLabel, onAction, duration = 2200 } = 
     button.type = "button";
     button.className = "toast__action";
     button.textContent = actionLabel;
-    button.style.marginLeft = "var(--space-3)";
-    button.style.border = "0";
-    button.style.background = "transparent";
-    button.style.color = "#a5b4fc";
-    button.style.fontWeight = "var(--weight-bold)";
-    button.style.cursor = "pointer";
     button.addEventListener("click", () => {
-      if (typeof onAction === "function") onAction();
-      hideToast();
+      // onAction에서 오류가 나도 토스트는 반드시 닫는다
+      try {
+        if (typeof onAction === "function") onAction();
+      } finally {
+        hideToast();
+      }
     });
     toast.appendChild(button);
   }
