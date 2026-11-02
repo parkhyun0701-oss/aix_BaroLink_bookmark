@@ -927,13 +927,13 @@ await (async () => {
   })();
   ```
 - 기대 결과: `javascript:`·`chrome://` 주소, 최근 30일 안에 북마크바에서 연 북마크(`dateLastUsed` 기준), 직접 옮긴 북마크(`manualMoves`)는 빠진다. 30일이 지난 것은 다시 대상이다. 빈 입력이면 빈 배열이다. (F05-04, F07-07)
-- 확인하지 않는 것: options(북마크바 제외, 포함할 사용자 폴더)는 키 이름이 명세에 없어 기본값(`{}`)만 본다(F06-04, P2. 4장 4-3).
+- 확인하지 않는 것: options(`{ excludeBar, includeFolderIds }`, 명세 v17)는 F06-04(P2)에서 쓰므로 기본값(`{}`)만 본다(4장 4-3).
 - 결과: 통과 / 실패 / 보류   확인자:   날짜:
 
 #### C-N20 makePlan: 폴더 계획 (샘플 100개) · P1
 - 구현 상태: 뼈대(미구현) · 명세 기준으로 작성, 코드와 대조하지 못함
 - 파일·담당: plan.js · 팀원 C
-- 관련 요구사항: F05-05, F05-06, F05-07, F05-08
+- 관련 요구사항: F05-05, F05-06, F05-07, F05-08, F06-03
 - 안전 등급: 읽기만
 - 사전 조건: C-N19와 같다. 사전 조건으로 C-N17, C-N19가 통과해야 한다.
 - 붙여 넣을 코드:
@@ -953,14 +953,19 @@ await (async () => {
     const all = (p?.folders ?? []).flatMap((f) => f.items.map((b) => b.id));
     T.expect("북마크 하나는 한 폴더에만", new Set(all).size === all.length);
     T.expect("F05-08 분류 안 됨인 북마크는 폴더에 없다", (p?.folders ?? []).every((f) => f.items.every((b) => T.classify.classify(b, c)?.category === f.name)));
-    const restN = Array.isArray(p?.rest) ? p.rest.length : p?.rest;
-    T.expect("폴더에 든 것 + 나머지(rest) = 정리 대상", all.length + restN === targets.length, { inFolders: all.length, rest: restN, targets: targets.length });
+    T.expect("rest는 폴더에 들어가지 않은 정리 대상의 개수(숫자)", typeof p?.rest === "number", p?.rest);
+    T.expect("폴더에 든 것 + 나머지(rest) = 정리 대상", all.length + p?.rest === targets.length, { inFolders: all.length, rest: p?.rest, targets: targets.length });
+    T.expect("F05-05·07 folders는 많은 순, 개수가 같으면 categories.json 순서", (p?.folders ?? []).every((f, i, a) => i === 0 || a[i - 1].items.length > f.items.length || (a[i - 1].items.length === f.items.length && names.indexOf(a[i - 1].name) < names.indexOf(f.name))), p?.folders?.map((f) => [f.name, f.items?.length]));
+    T.expect("F06-03 reasons는 폴더마다 items와 같은 순서·같은 길이", (p?.folders ?? []).every((f) => Array.isArray(f.reasons) && f.reasons.length === f.items.length && f.reasons.every((r, i) => r?.bookmarkId === f.items[i].id)), p?.folders?.map((f) => [f.name, f.items?.length, f.reasons?.length]));
+    T.expect("F06-03 reasons는 { bookmarkId, step, rule, needsCheck }이고 classify의 근거와 같다", (p?.folders ?? []).every((f) => (f.reasons ?? []).every((r, i) => {
+      const k = T.classify.classify(f.items[i], c);
+      return T.same(Object.keys(r).sort(), ["bookmarkId", "needsCheck", "rule", "step"]) && r.step === k.step && r.rule === k.rule && r.needsCheck === k.needsCheck;
+    })), p?.folders?.[0]?.reasons);
     T.expect("F05-07 같은 입력은 같은 계획", T.same(p, T.plan.makePlan(targets, c)));
     T.record("폴더별 이름과 개수", p?.folders?.map((f) => `${f.name} ${f.items?.length}`));
-    T.record("reasons의 모양(F06-03 분류 근거)", p?.folders?.[0]?.reasons);
   })();
   ```
-- 기대 결과: 90개면 폴더는 최대 5개이고, 모든 폴더가 3개 이상이며 "기타" 폴더가 없다. 분류 안 됨은 폴더에 넣지 않는다. 같은 입력은 같은 계획이다. (N20, F05-05~08)
+- 기대 결과: 90개면 폴더는 최대 5개이고, 모든 폴더가 3개 이상이며 "기타" 폴더가 없다. 분류 안 됨은 폴더에 넣지 않는다. `folders`는 많은 순이고 개수가 같으면 `categories.json` 순서다. `rest`는 폴더에 들어가지 않은 정리 대상의 개수(숫자)다. 폴더마다 `reasons`가 `items`와 같은 순서·같은 길이의 `{ bookmarkId, step, rule, needsCheck }`다. 같은 입력은 같은 계획이다. (N20 v17, F05-05~08, F06-03)
 - 결과: 통과 / 실패 / 보류   확인자:   날짜:
 
 #### C-N20-예외 makePlan: 개수 경계와 동점 (가짜 입력) · P1
@@ -1002,13 +1007,14 @@ await (async () => {
     const few = mp(build([5, 2, 3], 2));
     T.expect("F05-06 2개뿐인 카테고리는 폴더가 아니다", !(few?.folders ?? []).some((f) => f.name === names[1]), few?.folders?.map((f) => f.name));
     T.expect("F05-08 분류 안 됨은 폴더에 들어가지 않는다", (few?.folders ?? []).every((f) => f.items.every((b) => !b.id.startsWith("u"))));
-    T.record("type pin일 때의 reason", mp(build([3, 3, 3]))?.reason);
+    T.expect("F05-09 10개 미만이면 reason \"tooFew\"", mp(build([3, 3, 3]))?.reason === "tooFew" && mp([])?.reason === "tooFew", [mp(build([3, 3, 3]))?.reason, mp([])?.reason]);
+    T.expect("F05-09 3개 이상 모인 카테고리가 없으면 reason \"noGroup\"", mp(build([2, 2, 2, 2, 2]))?.reason === "noGroup", mp(build([2, 2, 2, 2, 2]))?.reason);
   })();
   ```
 - 기대 결과:
   - 정리 대상 10~29개는 최대 3개, 30~59개는 4개, 60~99개는 5개, 100개 이상은 6개다. 많은 카테고리부터 고른다. (F05-05)
   - 3개 미만 카테고리는 폴더로 만들지 않는다. (F05-06) 개수가 같으면 `categories.json` 순서로 고른다. (F05-07)
-  - 10개 미만이거나 3개 이상 모인 카테고리가 없으면 `type: "pin"`이다. (F05-09)
+  - 10개 미만이거나 3개 이상 모인 카테고리가 없으면 `type: "pin"`이다. `reason`은 10개 미만이면 `"tooFew"`, 3개 이상 모인 카테고리가 없으면 `"noGroup"`이다. (F05-09, N20 v17)
   - 폴더 수가 상한보다 적어도 되는지("최대")는 명세에 없으므로, 만든 폴더 수는 기록만 한다.
 - 결과: 통과 / 실패 / 보류   확인자:   날짜:
 
@@ -1467,7 +1473,10 @@ await (async () => {
     const c = await T.cats();
     const vid = T.ofCat(c, 1, 4), dev = T.ofCat(c, 5, 3);
     const kw = T.fakeBm("kw", "2026 하반기 신입 채용", "https://careers.example.com/");
-    const plan = { type: "folders", folders: [{ name: "영상", items: vid, reasons: [] }, { name: "취업", items: [kw, ...T.ofCat(c, 6, 2)], reasons: [] }, { name: "개발", items: dev, reasons: [] }], rest: T.unknown(5) };
+    // N20 v17: reasons는 폴더마다 items와 같은 순서, rest는 개수
+    const rs = (items) => items.map((b) => { const { category, ...r } = T.classify.classify(b, c); return { bookmarkId: b.id, ...r }; });
+    const job = [kw, ...T.ofCat(c, 6, 2)];
+    const plan = { type: "folders", folders: [{ name: "영상", items: vid, reasons: rs(vid) }, { name: "취업", items: job, reasons: rs(job) }, { name: "개발", items: dev, reasons: rs(dev) }], rest: 5 };
     const actions = { showResultNotice: (e) => console.log("actions.showResultNotice", e), openFolder: (id) => console.log("actions.openFolder", id), showContextMenu: (b) => console.log("actions.showContextMenu", b) };
     T.cards.showFirstCard(plan, actions);
     const card = document.querySelector("#organize-suggestion")?.textContent ?? "";
@@ -1489,7 +1498,7 @@ await (async () => {
   - 정리 창이 메인 화면 위에 어둡게 겹친 팝업이다. Esc나 바깥 클릭으로 닫힌다. (F12-03, F12-04)
   - 정리 창에 폴더별 분류 근거가 보인다. (F06-03)
   - 카드의 [나중에]를 누르면 카드가 닫히고 `(await T.stored()).state?.firstCard`가 `"later"`다. 헤더의 [정리하기]를 누르면 같은 카드가 다시 열린다. (F06-06, N38)
-  - (P2) `T.cards.showFirstCard({ type: "pin", reason: "" }, actions)` → "북마크들이 서로 달라서 아직 묶을 폴더가 없어요. 대신 자주 쓰는 북마크 5개를 고정할까요?"와 [고정하기]·[고르기]·[나중에]가 보인다. (F06-07, F09-01)
+  - (P2) `T.cards.showFirstCard({ type: "pin", reason: "noGroup" }, actions)` → "북마크들이 서로 달라서 아직 묶을 폴더가 없어요. 대신 자주 쓰는 북마크 5개를 고정할까요?"와 [고정하기]·[고르기]·[나중에]가 보인다. (F06-07, F09-01)
   - (P2) `T.cards.showPinPicker()` → "고정할 북마크 고르기" 창이 열린다(F09-05, F09-06). 이 함수의 입력은 아직 정하지 않았다(`docs/file-structure.md` 12번).
 - 결과: 통과 / 실패 / 보류   확인자:   날짜:
 
@@ -2056,8 +2065,8 @@ export는 모두 있지만(자동 검사가 확인한다), 몸체가 비어 있�
 | N01 | 북마크에 붙이는 "들어 있는 폴더와 최상위 폴더 종류"의 필드 이름 | 기록만 한다. `main` `049b9be`의 코드는 `folderTitle`, `path`, `rootType`, `rootId`, `rootChosen` | C-N01 |
 | N14 | `setPending(moves)` 원소의 키 이름 (`[{북마크ID, 목적지 폴더}]`) | 명세 v16에서 `{ id, toParentId }`로 정해졌다(`store.js`와 같다). 처음에는 `history.moves`의 이름(`bookmarkId`)을 넣었다. `history.moves` 안의 `bookmarkId`는 그대로다 | C-N14, C-N33 |
 | N18 | `measure(samples, answers, …)`의 samples와 answers 형태 | 둘 다 `answer-key-100.json` 배열 | C-N18 |
-| N19 | options `{북마크바 제외, 포함할 사용자 폴더}`의 키 이름 | `{}`(기본값)만 확인 | C-N19 |
-| N20 | `rest`가 배열인지 개수인지, `reasons`의 형태 | 둘 다 받게 썼다 / 기록만 | C-N20 |
+| N19 | options `{북마크바 제외, 포함할 사용자 폴더}`의 키 이름 | 명세 v17에서 `{ excludeBar, includeFolderIds }`(기본값 `{ excludeBar: false, includeFolderIds: [] }`)로 정해졌다. P2라 `{}`(기본값)만 확인 | C-N19 |
+| N20 | `rest`가 배열인지 개수인지, `reasons`의 형태, pin의 `reason` 값 | 명세 v17에서 정해졌다. `rest`는 개수(숫자), `reasons`는 폴더마다 items와 같은 순서·같은 길이의 `{ bookmarkId, step, rule, needsCheck }`, `reason`은 `"tooFew"`·`"noGroup"`. 처음에는 `rest`를 둘 다 받게 썼고 `reasons`는 기록만 했다 | C-N20, C-N20-예외, C-N31 |
 | N22 | `folders[].items`의 원소(북마크 노드인지 ID인지), `keep`의 원소 | 크롬 북마크 노드 / 북마크 ID | C-N22, C-N22-예외 |
 | N24 | `folders`(현재 폴더)의 원소 | 크롬 폴더 노드처럼 `{ id, title }` | C-N24 |
 | N31 | `showPinPicker()`의 입력 (P2를 시작할 때 정한다, `docs/file-structure.md` 12번) | 입력 없이 부름 | C-N31 |
