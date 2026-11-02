@@ -451,6 +451,29 @@ a {
   color: var(--color-on-dark);
 }
 
+/* 로고 타일 색 변형 (cards.js가 쓴다) */
+.brand__logo--primary {
+  background: var(--color-primary);
+  color: var(--color-on-dark);
+}
+
+.brand__logo--soft {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+/* 공통 버튼 묶음 — 가로로 나란히. --end면 오른쪽 정렬 (cards.js 정리 창 바닥 버튼 등) */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.actions--end {
+  justify-content: flex-end;
+}
+
 /* 헤더 안의 로고·버튼 모양 (render.js가 내용을 채운다) */
 #header .brand {
   display: flex;
@@ -582,6 +605,22 @@ a {
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
+}
+
+.organize__folder-name {
+  margin: 0;
+}
+
+/* 폴더별 분류 근거 한 줄 (F06-03) */
+.organize__reason {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-xs);
+  color: var(--color-text-faint);
+}
+
+/* 정리 창 바닥 버튼 묶음의 위 여백 */
+.organize__footer {
+  margin-top: var(--space-6);
 }
 
 /* 제목 키워드로 분류돼 사람이 확인하는 게 좋은 북마크 표시 (F06-05) */
